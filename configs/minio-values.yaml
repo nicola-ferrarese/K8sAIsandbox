@@ -1,0 +1,67 @@
+# MinIO configuration for minikube with MetalLB
+mode: standalone
+replicas: 1
+
+rootUser: minioadmin
+rootPassword: minioadmin
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: standard
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 250m
+  limits:
+    memory: 1Gi
+    cpu: 500m
+
+service:
+  type: ClusterIP
+  port: 9000
+  consolePort: 9001
+
+# Configure MinIO environment variables
+environment:
+  # Tell MinIO where the console is accessible
+  MINIO_BROWSER_REDIRECT_URL: "http://minio-console.local"
+  # Optional: Set console address explicitly
+  MINIO_SERVER_URL: "http://minio.local"
+
+# Main ingress for API (port 9000)
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - minio.local
+  pathSuffix: ""
+  pathType: Prefix
+  tls: []
+
+# Separate ingress for console (port 9001)
+consoleIngress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - minio-console.local
+  pathSuffix: ""
+  pathType: Prefix
+  tls: []
+
+# Volume permissions fix
+securityContext:
+  enabled: false
+podSecurityContext: {}
+containerSecurityContext: {}
+
+volumePermissions:
+  enabled: true
+  securityContext:
+    runAsUser: 0
