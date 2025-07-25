@@ -1,5 +1,5 @@
 
-# JupyterHub ~~, MLFlow, MinIO, Kserve & Keycloak~~ on Kubernetes
+# JupyterHub, MinIO, ~~MLFlow, Kserve & Keycloak~~ on Kubernetes
 A complete deployment setup for running JupyterHub on Kubernetes with PostgreSQL backend, MetalLB load balancing, and NGINX ingress controller. 
 
 This configuration supports both local development with Minikube and production bare-metal deployments.
@@ -8,6 +8,7 @@ This configuration supports both local development with Minikube and production 
 
 This setup includes:
 - **JupyterHub**: Multi-user Jupyter notebook server
+- **MinIO**: Object and artifact storage
 - **PostgreSQL**: Persistent database backend for JupyterHub
 - **NGINX Ingress Controller**: HTTP/HTTPS routing and load balancing
 - **MetalLB**: Load balancer implementation for bare-metal Kubernetes clusters
@@ -15,17 +16,14 @@ This setup includes:
 ## 📁 Repository Structure
 
 ```
-├── config.yaml                    # Minikube configuration
-├── ingress-nginx/                  # NGINX Ingress Helm chart (reference)
-├── jupyterhub/                     # JupyterHub Helm chart (reference)
-├── metallb/                        # MetalLB Helm chart (reference)
-├── jupyterhub-helm-config/
+├── configs/
+│   ├── minio-values               # MinIo configuration
 │   ├── postgresql-values.yaml     # PostgreSQL configuration
-│   └── values.yaml                # JupyterHub configuration
+│   └── jupyter-values.yaml        # JupyterHub configuration
 ├── Metallb-helm-config/
 │   ├── metallb-config.yaml        # MetalLB IP pool configuration
 │   └── values.yaml                # MetalLB Helm values
-└── README.md                       # This file
+└── README.md                      # This file
 ```
 
 ## 🚀 Quick Start
@@ -36,17 +34,6 @@ This setup includes:
 - Helm 3.x
 - kubectl configured to access your cluster
 
-### Minikube Setup
-
-```bash
-# Start Minikube with sufficient resources
-minikube start --memory=4096 --cpus=2
-
-# Enable required addons
-minikube addons enable ingress
-minikube addons enable storage-provisioner
-```
-
 ## 📦 Installation Steps
 
 ### 1. Add Helm Repositories
@@ -56,6 +43,7 @@ helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
 helm repo add metallb https://metallb.github.io/metallb
 helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add minio https://charts.min.io/
 helm repo update
 ```
 
@@ -69,15 +57,8 @@ helm pull ingress-nginx/ingress-nginx --untar
 helm install ingress-nginx ingress-nginx/ingress-nginx
 ```
 
-### 3. Setup MetalLB (for Bare Metal) or Minikube Tunnel
+### 3. Setup MetalLB
 
-#### For Minikube (Development):
-```bash
-# Run in background to expose LoadBalancer services
-minikube tunnel &
-```
-
-#### For Bare Metal (Production):
 ```bash
 # Create MetalLB namespace
 kubectl create namespace metallb-system
@@ -111,7 +92,13 @@ helm pull jupyterhub/jupyterhub --untar
 helm upgrade --install jupyter jupyterhub/jupyterhub \
   --namespace jupyter \
   --create-namespace \
-  -f jupyterhub-helm-config/values.yaml
+  -f config/jupyter-values.yaml
+```
+### 6. Install MinIO
+```
+helm install minio minio/minio \
+  -n minio --create-namespace \
+  -f config/minio-values.yaml
 ```
 
 ## 🔧 Configuration
@@ -143,10 +130,11 @@ The `Metallb-helm-config/` directory contains:
 
 1. Add to your `/etc/hosts` file:
    ```
-   127.0.0.1 jupyter.local
+   <Your cluster IP> jupyter.local minio.local minio-console.local
    ```
 
 2. Access JupyterHub at: `http://jupyter.local`
+3. Access to MinIo at: `http://minio-console.local`
 
 
 ### Useful Commands
