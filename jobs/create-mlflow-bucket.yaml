@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-mlflow-bucket
+  namespace: minio
+spec:
+  template:
+    spec:
+      containers:
+      - name: mc
+        image: minio/mc:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          until mc alias set myminio http://minio:9000 minioadmin minioadmin; do
+            echo "Waiting for MinIO..."
+            sleep 2
+          done
+          mc mb myminio/mlflow --ignore-existing
+          echo "Bucket mlflow ready"
+      restartPolicy: Never
+  backoffLimit: 3
