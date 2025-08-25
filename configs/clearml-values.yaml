@@ -1,0 +1,101 @@
+global:
+  imageRegistry: docker.io
+
+clearml:
+  cookieName: "clearml-token-k8s"
+  cookieDomain: ".clearml.local"
+
+apiserver:
+  image:
+    repository: "clearml/server"
+    tag: "2.2"
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostName: "api.clearml.local"
+    path: /
+    tls:
+      - hosts:
+          - api.clearml.local
+        secretName: clearml-tls
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/proxy-cookie-samesite: "None"
+      nginx.ingress.kubernetes.io/proxy-cookie-secure: "true"
+  extraEnvs:
+    - name: CLEARML__APISERVER__AUTH__COOKIES__DOMAIN
+      value: ".clearml.local"
+    - name: CLEARML__APISERVER__AUTH__COOKIES__HTTPONLY
+      value: "true"
+    - name: CLEARML__APISERVER__AUTH__COOKIES__SECURE
+      value: "true"
+    - name: CLEARML__APISERVER__AUTH__COOKIES__SAMESITE
+      value: "None"
+    - name: CLEARML__APISERVER__AUTH__COOKIES__PATH
+      value: "/"
+    - name: CLEARML__API__VERIFY_CERTIFICATE
+      value: "False"
+    - name: CLEARML__FILESERVER__DOWNLOAD__URL
+      value: "http://minio.local"
+
+
+
+fileserver:
+  image:
+    repository: "clearml/server"
+    tag: "2.2" 
+  enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostName: "files.clearml.local"
+    path: /
+    tls:
+      - hosts:
+          - files.clearml.local
+        secretName: clearml-tls
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/cors-allow-origin: "https://clearml.local"
+      nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+      nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+      nginx.ingress.kubernetes.io/cors-allow-headers: "*"
+      nginx.ingress.kubernetes.io/enable-cors: "true"
+      nginx.ingress.kubernetes.io/proxy-cookie-samesite: "None"
+      nginx.ingress.kubernetes.io/proxy-cookie-secure: "true"
+  storage:
+    type: volume
+  extraEnvs:
+  - name: CLEARML_API_HOST
+    value: "https://api.clearml.local"
+  - name: CLEARML__FILESERVER__AUTH__ENABLED
+    value: "true"
+  - name: CLEARML__FILESERVER__AUTH__COOKIE_DOMAIN
+    value: ".clearml.local"
+  - name: CLEARML__FILESERVER__DOWNLOAD__URL
+    value: "http://minio.local"
+      
+webserver:
+  image:
+    repository: "clearml/server"
+    tag: "2.2"
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostName: "app.clearml.local"
+    path: /
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/proxy-cookie-samesite: "None"
+      nginx.ingress.kubernetes.io/proxy-cookie-secure: "true"
+    tls:
+      - hosts:
+          - app.clearml.local
+        secretName: clearml-tls
+  extraEnvs:
+    - name: CLEARML__WEBSERVER__useFilesProxy
+      value: '"true"'
+    - name: WEBSERVER__fileBaseUrl
+      value: '"https://files.clearml.local/"'
+    - name: CLEARML_FILES_HOST
+      value: "https://files.clearml.local"

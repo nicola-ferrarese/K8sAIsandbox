@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clearml-config
+  namespace: jupyter
+data:
+  clearml.conf: |
+    api {
+      api_server: "https://api.clearml.local"
+      web_server: "https://app.clearml.local"
+      files_server: "https://files.clearml.local"
+      verify_certificate: False
+    }
+
+    sdk {
+      development {
+        default_output_uri: "https://files.clearml.local"
+      }
+      aws {
+        s3 {
+          host: "minio.minio.svc.cluster.local:9000" 
+          region: "us-east-1"
+          key: ${MINIO_ACCESS_KEY}
+          secret: ${MINIO_SECRET_KEY}
+          secure: false
+          verify: false
+          credentials: [
+            { host:"minio.minio.svc.cluster.local:9000" bucket: "clearml-artifacts" secure: false verify: false }
+          ]
+        },
+        s3 {
+          host: "minio.local" 
+          region: "us-east-1"
+          key: ${MINIO_ACCESS_KEY}
+          secret: ${MINIO_SECRET_KEY}
+          secure: false
+          verify: false
+          credentials: [
+            { host:"minio.local" bucket: "clearml-models" secure: false verify: false }
+          ]
+        }
+      }
+    }
