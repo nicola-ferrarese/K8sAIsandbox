@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: clearml-tls
+  namespace: default
+spec:
+  secretName: clearml-tls
+  commonName: clearml.local
+  dnsNames:
+  - app.clearml.local
+  - api.clearml.local
+  - files.clearml.local
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
