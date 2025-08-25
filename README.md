@@ -56,7 +56,9 @@ helm repo add metallb https://metallb.github.io/metallb
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo add minio https://charts.min.io/
 helm repo add community-charts https://community-charts.github.io/helm-charts
+helm repo add clearml https://clearml.github.io/clearml-helm-charts
 helm repo update
+
 ```
 
 ### 2. Install NGINX Ingress Controller
@@ -130,6 +132,18 @@ helm upgrade --install mlflow community-charts/mlflow \
   --create-namespace \
   --values configs/mlflow-values.yaml
 ```
+
+### 7. Install ClearML Server
+```
+helm upgrade --install clearml clearml/clearml  -n clearml --create-namespace -f clearml-values_bak.yaml 
+```
+
+### 8. Run a test
+- Create a Bucket in MinIO
+- Create a Key/secret pair in MinIO
+- Create a key secret pair in ClearML
+- Copy the credentials in the "ClearML Integreation notebook" jupyter notebook
+- See results in clearML
 
 ---
 
