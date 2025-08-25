@@ -24,19 +24,18 @@ service:
   port: 9000
   consolePort: 9001
 
-# Configure MinIO environment variables
 environment:
-  # Tell MinIO where the console is accessible
   MINIO_BROWSER_REDIRECT_URL: "http://minio-console.local"
-  # Optional: Set console address explicitly
   MINIO_SERVER_URL: "http://minio.local"
+  MINIO_DOMAIN: "minio.local"
 
 # Main ingress for API (port 9000)
 ingress:
   enabled: true
   ingressClassName: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+  annotations: 
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   hosts:
     - minio.local
   pathSuffix: ""
