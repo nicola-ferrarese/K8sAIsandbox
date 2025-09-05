@@ -34,7 +34,9 @@ apiserver:
     - name: CLEARML__APISERVER__AUTH__COOKIES__PATH
       value: "/"
     - name: CLEARML__API__VERIFY_CERTIFICATE
-      value: "False"
+      value: "false"
+    - name: CLEARML_API_HOST_VERIFY_CERT
+      value: "false"
     - name: CLEARML__FILESERVER__DOWNLOAD__URL
       value: "http://minio.local"
 
