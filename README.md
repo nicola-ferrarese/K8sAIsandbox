@@ -1,7 +1,7 @@
 
-# JupyterHub, MinIO, MLFlow, ~~Kserve & Keycloak~~ on Kubernetes
+# JupyterHub, MinIO, ClearML & ClearML Agent on Kubernetes
 
-A complete deployment setup for running JupyterHub on Kubernetes with PostgreSQL backend, MinIO object storage, MLFlow experiment tracking, MetalLB load balancing, and NGINX ingress controller.
+A complete deployment setup for running JupyterHub on Kubernetes with PostgreSQL backend, MinIO object storage, ClearML experiment tracking and model management, ClearML Agent for distributed ML workloads, MetalLB load balancing, and NGINX ingress controller.
 
 This configuration supports both local development with Minikube and production bare-metal deployments.
 
@@ -10,8 +10,9 @@ This configuration supports both local development with Minikube and production 
 This setup includes:
 - **JupyterHub**: Multi-user Jupyter notebook server
 - **MinIO**: S3-compatible object storage for artifacts and data
-- **MLFlow**: Machine learning experiment tracking and model registry
-- **PostgreSQL**: Persistent database backend for JupyterHub and MLFlow
+- **ClearML**: Complete MLOps platform for experiment tracking, model management, and pipeline orchestration
+- **ClearML Agent**: Distributed workers for executing ML experiments and tasks
+- **PostgreSQL**: Persistent database backend for JupyterHub and ClearML
 - **NGINX Ingress Controller**: HTTP/HTTPS routing and load balancing
 - **MetalLB**: Load balancer implementation for bare-metal Kubernetes clusters
 
@@ -21,11 +22,13 @@ This setup includes:
 ├── configs/
 │   ├── jupyter-values.yaml         # JupyterHub Helm configuration
 │   ├── minio-values.yaml          # MinIO storage configuration
-│   ├── mlflow-values.yaml         # MLFlow tracking server configuration
+│   ├── clearml-values.yaml        # ClearML server configuration
+│   ├── clearml-agent.yaml         # ClearML agent deployment
+│   ├── clearml-configmaps.yaml    # ClearML configuration maps
+│   ├── clearml-pvc.yaml           # ClearML persistent volume claims
 │   └── postgresql-values.yaml     # PostgreSQL database configuration
-├── jobs/
-│   ├── create-mlflow-bucket.yaml  # MinIO bucket setup for MLFlow
-│   └── create-mlflow-db.yaml      # Database initialization for MLFlow
+├── certs/
+│   └── clearml-tls.yaml           # TLS certificates for ClearML
 ├── metallb-helm-config/
 │   ├── metallb-config.yaml        # MetalLB IP pool configuration
 │   └── values.yaml               # MetalLB Helm values
@@ -55,7 +58,6 @@ helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
 helm repo add metallb https://metallb.github.io/metallb
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo add minio https://charts.min.io/
-helm repo add community-charts https://community-charts.github.io/helm-charts
 helm repo add clearml https://clearml.github.io/clearml-helm-charts
 helm repo update
 
@@ -119,68 +121,63 @@ helm install minio minio/minio \
   -f configs/minio-values.yaml
 ```
 
-### 7. Install MLFlow Tracking Server
+### 7. Prepare ClearML Installation Resources
+
+Before installing ClearML server, apply the necessary preparation resources:
 
 ```bash
-# Create MLFlow bucket and database
-kubectl apply -f jobs/create-mlflow-bucket.yaml
-kubectl apply -f jobs/create-mlflow-db.yaml
+# Create TLS certificates for ClearML
+kubectl apply -f certs/clearml-tls.yaml
 
-# Install MLFlow tracking server
-helm upgrade --install mlflow community-charts/mlflow \
-  --namespace mlflow \
+# Create ClearML persistent volumes
+kubectl apply -f configs/clearml-pvc.yaml
+
+# Create ClearML configuration maps
+kubectl apply -f configs/clearml-configmaps.yaml
+```
+
+### 8. Install ClearML Server
+
+```bash
+# Install ClearML server
+helm upgrade --install clearml clearml/clearml \
+  --namespace clearml \
   --create-namespace \
-  --values configs/mlflow-values.yaml
+  -f configs/clearml-values.yaml
 ```
 
-### 7. Install ClearML Server
+### 9. Install ClearML Agent Workers
+
+```bash
+# Create namespace for ClearML workers
+kubectl create namespace clearml-workers
+
+# Deploy ClearML agents
+kubectl apply -f configs/clearml-agent.yaml
 ```
-helm upgrade --install clearml clearml/clearml  -n clearml --create-namespace -f clearml-values_bak.yaml 
-```
 
-### 8. Run a test
-- Create a Bucket in MinIO
-- Create a Key/secret pair in MinIO
-- Create a key secret pair in ClearML
-- Copy the credentials in the "ClearML Integreation notebook" jupyter notebook
-- See results in clearML
+**Important**: Before deploying ClearML agents, you must:
+1. Access ClearML web UI at `https://app.clearml.local`
+2. Go to Settings → Workspace → App Credentials
+3. Create new API credentials (access_key and secret_key)
+4. Update the credentials in `configs/clearml-agent.yaml` at lines 63-64
+5. The same credentials should be used in other services that need to connect to ClearML
 
----
+### 10. Setup and Testing
 
-## 🔧 Configuration Details
+1. **Create MinIO buckets for ClearML**:
+   - `clearml-artifacts` - for experiment artifacts
+   - `clearml-models` - for model storage
 
-### JupyterHub Configuration
-The `configs/jupyter-values.yaml` file contains:
-- PostgreSQL database connection settings
-- Ingress configuration for `jupyter.local`
-- Security contexts optimized for Minikube
-- Single-user notebook server configuration
-- Resource limits and requests
+2. **Configure ClearML credentials across services**:
+   - Generate API credentials from ClearML web UI
+   - Update credentials in `configs/clearml-agent.yaml`
+   - Use the same credentials in any Jupyter notebooks or client applications
 
-### MinIO Configuration
-The `configs/minio-values.yaml` includes:
-- S3-compatible API configuration
-- Console access settings
-- Ingress routing for `minio.local` and `minio-console.local`
-- Storage persistence settings
-
-### MLFlow Configuration
-The `configs/mlflow-values.yaml` contains:
-- MinIO backend storage configuration
-- PostgreSQL metadata store connection
-- Ingress configuration for experiment tracking UI
-- Authentication and authorization settings
-
-### PostgreSQL Configuration
-The `configs/postgresql-values.yaml` includes:
-- Minikube-specific permission fixes
-- Volume permissions configuration
-- Database initialization scripts
-
-### MetalLB Configuration
-The `metallb-helm-config/` directory contains:
-- IP address pool configuration for load balancer services
-- LoadBalancer service type settings
+3. **Test the setup**:
+   - Use the provided Jupyter notebook samples
+   - Run ML experiments and verify they appear in ClearML UI
+   - Check that artifacts are stored in MinIO
 
 ---
 
@@ -190,7 +187,7 @@ The `metallb-helm-config/` directory contains:
 
 1. **Configure local DNS** - Add to your `/etc/hosts` file:
    ```
-   <CLUSTER_IP> jupyter.local minio.local minio-console.local mlflow.local
+   <CLUSTER_IP> jupyter.local minio.local minio-console.local app.clearml.local api.clearml.local files.clearml.local
    ```
 
 2. **Service URLs**:
@@ -199,100 +196,13 @@ The `metallb-helm-config/` directory contains:
   | JupyterHub      | http://jupyter.local       |
   | MinIO Console   | http://minio-console.local |
   | MinIO API       | http://minio.local         |
-  | MLFlow UI       | http://mlflow.local        |
+  | ClearML Web UI  | https://app.clearml.local  |
+  | ClearML API     | https://api.clearml.local  |
+  | ClearML Files   | https://files.clearml.local|
 
 ### Production Access
 
 For production deployments, update the ingress configurations in the values files to use your actual domain names and configure proper TLS certificates.
-
----
-
-## 🛠️ Useful Commands
-
-### Monitoring and Debugging
-
-```bash
-# View JupyterHub logs
-kubectl logs -f deployment/hub -n jupyter
-
-# View MinIO logs
-kubectl logs -f deployment/minio -n minio
-
-# View MLFlow logs
-kubectl logs -f deployment/mlflow -n mlflow
-
-# View PostgreSQL logs
-kubectl logs -f postgresql-0 -n jupyter
-
-# Restart services
-kubectl rollout restart deployment/hub -n jupyter
-kubectl rollout restart deployment/minio -n minio
-kubectl rollout restart deployment/mlflow -n mlflow
-```
-
-### Database Operations
-
-```bash
-# Test PostgreSQL connection
-kubectl run postgresql-client --rm --tty -i --restart='Never' \
-  --namespace jupyter \
-  --image docker.io/bitnami/postgresql:15 \
-  --env="PGPASSWORD=yourpassword" \
-  --command -- psql --host postgresql --port 5432 -U postgres -d jupyterhub
-```
-
-### Service Status
-
-```bash
-# Check all deployments
-kubectl get deployments --all-namespaces
-
-# Check ingress resources
-kubectl get ingress --all-namespaces
-
-# Check services and endpoints
-kubectl get svc,endpoints --all-namespaces
-```
-
----
-
-## 🔄 Maintenance & Upgrades
-
-### Upgrade JupyterHub
-
-```bash
-helm repo update
-helm upgrade jupyter jupyterhub/jupyterhub \
-  --namespace jupyter \
-  -f configs/jupyter-values.yaml
-```
-
-### Upgrade MinIO
-
-```bash
-helm repo update
-helm upgrade minio minio/minio \
-  --namespace minio \
-  -f configs/minio-values.yaml
-```
-
-### Upgrade MLFlow
-
-```bash
-helm repo update
-helm upgrade mlflow community-charts/mlflow \
-  --namespace mlflow \
-  --values configs/mlflow-values.yaml
-```
-
-### Upgrade PostgreSQL
-
-```bash
-helm repo update
-helm upgrade postgresql bitnami/postgresql \
-  --namespace jupyter \
-  -f configs/postgresql-values.yaml
-```
 
 ---
 
@@ -301,7 +211,8 @@ helm upgrade postgresql bitnami/postgresql \
 - [JupyterHub Documentation](https://jupyterhub.readthedocs.io/)
 - [JupyterHub Helm Chart](https://jupyterhub.github.io/helm-chart/)
 - [MinIO Documentation](https://min.io/docs/)
-- [MLFlow Documentation](https://mlflow.org/docs/latest/index.html)
+- [ClearML Documentation](https://clear.ml/docs/)
+- [ClearML Agent Documentation](https://clear.ml/docs/latest/docs/clearml_agent/)
 - [PostgreSQL Bitnami Chart](https://github.com/bitnami/charts/tree/main/bitnami/postgresql)
 - [MetalLB Documentation](https://metallb.universe.tf/)
 - [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/)
