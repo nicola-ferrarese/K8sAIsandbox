@@ -191,6 +191,7 @@ kubectl apply -f configs/clearml-agent.yaml
    ```
 
 2. **Service URLs**:
+   
   |   Service       | URL                        |
   |-----------------|----------------------------|
   | JupyterHub      | http://jupyter.local       |
