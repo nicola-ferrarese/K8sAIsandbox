@@ -4,6 +4,7 @@ global:
 clearml:
   cookieName: "clearml-token-k8s"
   cookieDomain: ".clearml.local"
+  existingSecret: "clearml-credentials"
 
 apiserver:
   image:
@@ -23,8 +24,6 @@ apiserver:
       nginx.ingress.kubernetes.io/proxy-cookie-samesite: "None"
       nginx.ingress.kubernetes.io/proxy-cookie-secure: "true"
   extraEnvs:
-    - name: CLEARML__APISERVER__AUTH__COOKIES__DOMAIN
-      value: ".clearml.local"
     - name: CLEARML__APISERVER__AUTH__COOKIES__HTTPONLY
       value: "true"
     - name: CLEARML__APISERVER__AUTH__COOKIES__SECURE

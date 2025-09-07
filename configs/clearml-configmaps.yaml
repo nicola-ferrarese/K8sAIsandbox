@@ -10,6 +10,10 @@ data:
       web_server: "https://app.clearml.local"
       files_server: "https://files.clearml.local"
       verify_certificate: False
+      credentials {
+        access_key: ${CLEARML_API_ACCESS_KEY}
+        secret_key: ${CLEARML_API_SECRET_KEY}
+      }
     }
 
     sdk {
@@ -29,14 +33,14 @@ data:
           ]
         },
         s3 {
-          host: "minio.local" 
+          host: "minio.local:80" 
           region: "us-east-1"
           key: ${MINIO_ACCESS_KEY}
           secret: ${MINIO_SECRET_KEY}
           secure: false
           verify: false
           credentials: [
-            { host:"minio.local" bucket: "clearml-models" secure: false verify: false }
+            { host:"minio.local:80" bucket: "clearml-models" secure: false verify: false }
           ]
         }
       }
