@@ -5,7 +5,7 @@ A complete deployment setup for running _JupyterHub_ on **Kubernetes** with Post
 
 This configuration supports both local development with Minikube and production bare-metal deployments.
 
-![overview](img/DiagramOverview.png)
+<img src="img/Overview.png" width="100%">
 
 ## 🏗️ Architecture
 
