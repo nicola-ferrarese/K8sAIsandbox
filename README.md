@@ -1,9 +1,11 @@
 
 # JupyterHub, MinIO, ClearML & ClearML Agent on Kubernetes
 
-A complete deployment setup for running JupyterHub on Kubernetes with PostgreSQL backend, MinIO object storage, ClearML experiment tracking and model management, ClearML Agent for distributed ML workloads, MetalLB load balancing, and NGINX ingress controller.
+A complete deployment setup for running _JupyterHub_ on **Kubernetes** with PostgreSQL backend, **MinIO object storage**, **ClearML experiment tracking and model management**, **ClearML Agent** for distributed ML workloads, **MetalLB load balancing**, and NGINX ingress controller.
 
 This configuration supports both local development with Minikube and production bare-metal deployments.
+
+![overview](img/DiagramOverview.png)
 
 ## 🏗️ Architecture
 
